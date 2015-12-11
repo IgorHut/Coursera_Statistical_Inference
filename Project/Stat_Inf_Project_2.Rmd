@@ -1,0 +1,108 @@
+---
+title: "Statistical Inference Project 2"
+author: "Igor Hut"
+date: "October 25, 2015"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 2
+  pdf_document:
+    toc: yes
+---
+
+## Overview of the project assignment
+
+This report written for the second part of the course project assignment for the Coursera course “Statistical Inference” which is a part of "Data Science" specialization. In this part of the project, we are supposed to perform basic inferential analyses using the ToothGrowth data in the R datasets package. According to acompaying help file the given dataset consists of 60 observations, namely lengths of odontoblasts (teeth) in each of 10 guinea pigs at each of three dose levels of Vitamin C (0.5, 1 and 2 mg) with each of two delivery methods (orange juice or ascorbic acid). 
+The overview of general steps that should be performed is given below:
+
+1. Load the ToothGrowth data and perform some basic exploratory data analyses 
+2. Provide a basic summary of the data.
+3. Use confidence intervals and/or hypothesis tests to compare Tooth growth by supp and dose. (Only use the techniques from class, even if there's other approaches worth considering)
+4. State your conclusions and the assumptions needed for your conclusions. 
+
+## 1. Load data and necessary libraries
+
+```{r message=FALSE}
+# load neccesary libraries
+library(datasets)
+library(dplyr)
+
+# load data
+data(ToothGrowth)
+toothGrowth<-ToothGrowth
+```
+
+## 2. Provide basic summary of the data and perform basic exploratory data analysis
+
+```{r}
+# look at the dataset structure
+str(ToothGrowth)
+
+# convert variable dose from numeric to factor
+toothGrowth$dose <- factor(ToothGrowth$dose, labels = c("0,5mg", "1mg", "2mg"))
+
+# look at the dataset structure after conversion
+str(toothGrowth)
+
+# basic summary statistics
+summary(toothGrowth)
+
+# summary statistics within each combination of dose level and delivery method
+
+by(toothGrowth$len, INDICES = list(toothGrowth$supp, toothGrowth$dose), summary)
+
+boxplot(len ~ supp * dose, data=toothGrowth, xlab = 'Delivery method and ammount', ylab= 'Tooth length', main = 'Boxplot of Tooth Growth Data', col=c('darkgreen', 'gold'))
+
+```
+
+Box plot clearly indicates that on average the length of the teeth increases with the increase of the vitamin C dose, i.e. positive correlation between these two seems to be evident. On the other hand it is not clear whether there is any correlation between the teeth length and the form in which C vitamin is administred (orange juice-OJ vs supplement-VC). Next we will use confidence intervals and hypothesis tests to compare tooth growth by delivery method and dosage.
+
+## 3. Confidence intervals and hypothesis tests - comparing tooth growth by delivery method and dosage
+
+### Checking for correlation between the delivery method and change in tooth growth:
+
+```{r}
+t.test(len ~ supp, paired = F, var.equal = F, data = ToothGrowth)
+```
+
+**A confidence interval of [-0.171, 7.571] does not allow for rejecton of the null hypothesis.**
+
+### Checking for correlation between the dose level and change in tooth growth:
+
+```{r}
+dose1 <- filter(ToothGrowth, dose==0.5|dose==1.0)
+dose2 <- filter(ToothGrowth, dose==0.5|dose==2.0)
+dose3 <- filter(ToothGrowth, dose==1.0|dose==2.0)
+t.test(len ~ dose, paired = F, var.equal = F, data = dose1)
+t.test(len ~ dose, paired = F, var.equal = F, data = dose2)
+t.test(len ~ dose, paired = F, var.equal = F, data = dose3)
+```
+**As indicated by confidence intervals [-11.98, -6.276] for doses 0.5 and 1.0, [-18.16, -12.83] for doses 0.5 and 2.0, and [-8.996, -3.734] for doses 1.0 and 2.0, the null hypothesis can be rejected which means that there is a significant correlation between tooth length and dose levels.**
+
+### Checking the data for correlation between dose level and change in tooth growth within each dose level group:
+
+```{r}
+dose1 <- filter(ToothGrowth, dose == 0.5)
+dose2 <- filter(ToothGrowth, dose == 1.0)
+dose3 <- filter(ToothGrowth, dose == 2.0)
+t.test(len ~ supp, paired = F, var.equal = F, data = dose1)
+t.test(len ~ supp, paired = F, var.equal = F, data = dose2)
+t.test(len ~ supp, paired = F, var.equal = F, data = dose3)
+
+```
+
+**The confidence intervals for dose levels 0.5mg and 1.0mg ([1.72, 8,78] and [2.80, 9.06]), allow for the rejection of the null hypothesis, which indicates that there is a significant correlation between tooth length and dose levels. However, the confidence interval for dose level 2.0 ([-3.80, 3.64]) is not enough to reject the null hypothesis.**
+
+##4. Assumptions and consequent conclusions
+
+Assumptions: 
+
+* The poplulations are independent
+* The variances between populations are different
+* Random population was used, comprised of similar guinea pigs
+* It was a double blind study. 
+
+For the populations to be independent, 60 guinea pigs would have to be used in such a manner that each combination of dose level and delivery method was not affected by the other methods. 
+
+On the account that given assumptions hold, it may be infered that there is a significant difference between tooth length and dose levels according to the used delivery method. **A higher dose level consistently leeds to longer teeth.** Initially it appeared that the delivery method had no significant impact on tooth length, but when controlling for dose level it emerged that there is a significant difference for 0.5mg and 1.0mg doses, but not for 2.0mg. **Hence it appears that orange juice is a better delivery method with a larger impact on tooth length for doses of 0.5 and 1.0 mg of Vitamin C, but above a certain dose lower than 2.0 mg there is no significant difference.**
+
